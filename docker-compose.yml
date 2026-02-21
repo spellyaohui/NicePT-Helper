@@ -1,0 +1,22 @@
+version: '3.8'
+
+services:
+  nicept-helper:
+    image: spellyaohui/nicept-helper:latest
+    container_name: nicept-helper
+    ports:
+      - "8000:8000"
+    environment:
+      - SECRET_KEY=${SECRET_KEY:-your-secret-key-change-me}
+      - DATABASE_URL=sqlite+aiosqlite:///./nicept.db
+      - SITE_URL=${SITE_URL:-https://www.nicept.net}
+      - REQUEST_DELAY=${REQUEST_DELAY:-2.0}
+    volumes:
+      - ./data:/app/backend
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "python", "-c", "import httpx; httpx.get('http://localhost:8000/api/health', timeout=5)"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 5s
