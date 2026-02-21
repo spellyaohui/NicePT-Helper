@@ -36,8 +36,8 @@ NicePT Helper 是一个针对 NicePT（基于 NexusPHP）的 PT 自动化管理�
 ### 1. 克隆项目
 
 ```bash
-git clone <repo-url>
-cd nicept-helper
+git clone https://github.com/spellyaohui/NicePT-Helper.git
+cd NicePT-Helper
 ```
 
 ### 2. 后端
@@ -168,7 +168,7 @@ sudo systemctl start nicept-helper
 ## 项目结构
 
 ```
-nicept-helper/
+NicePT-Helper/
 ├── backend/
 │   ├── main.py              # FastAPI 入口
 │   ├── config.py            # 配置管理
