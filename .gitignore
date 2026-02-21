@@ -22,6 +22,7 @@ frontend/.vite/
 # Database
 *.db
 *.sqlite
+nicept.db
 
 # IDE
 .vscode/
