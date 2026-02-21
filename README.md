@@ -27,20 +27,50 @@ NicePT Helper 是一个针对 NicePT（基于 NexusPHP）的 PT 自动化管理�
 
 ## 快速开始
 
-### 环境要求
+### 方式一：Docker（推荐）
+
+最简单的部署方式，一条命令启动：
+
+```bash
+docker run -d \
+  --name nicept-helper \
+  -p 8000:8000 \
+  -e SECRET_KEY=$(openssl rand -base64 32) \
+  -v nicept-data:/app/backend \
+  spellyaohui/nicept-helper:latest
+```
+
+或使用 Docker Compose：
+
+```bash
+# 克隆项目获取 docker-compose.yml
+git clone https://github.com/spellyaohui/NicePT-Helper.git
+cd NicePT-Helper
+
+# 编辑 docker-compose.yml，修改 SECRET_KEY
+docker-compose up -d
+```
+
+访问 `http://localhost:8000` 进行初始化。
+
+**详细 Docker 部署指南** → [DOCKER.md](./DOCKER.md)
+
+### 方式二：本地开发
+
+#### 环境要求
 
 - Python 3.10+
 - Node.js 18+
 - npm 或 yarn
 
-### 1. 克隆项目
+#### 1. 克隆项目
 
 ```bash
 git clone https://github.com/spellyaohui/NicePT-Helper.git
 cd NicePT-Helper
 ```
 
-### 2. 后端
+#### 2. 后端
 
 ```bash
 # 安装依赖
@@ -67,7 +97,7 @@ python backend/main.py
 
 首次启动会自动创建数据库表。
 
-### 3. 前端
+#### 3. 前端
 
 ```bash
 cd frontend
@@ -77,7 +107,7 @@ npm run dev    # 开发模式，端口 3000
 
 打开 `http://localhost:3000`，首次访问会进入注册页面创建管理员账号。
 
-### 4. 生产构建
+#### 4. 生产构建
 
 ```bash
 cd frontend
@@ -124,21 +154,22 @@ server {
 
 ### 方案二：Docker 部署（推荐）
 
-```dockerfile
-# Dockerfile 示例
-FROM python:3.12-slim
-WORKDIR /app
-COPY backend/ ./backend/
-COPY frontend/dist/ ./frontend/dist/
-RUN pip install --no-cache-dir -r backend/requirements.txt
-EXPOSE 8000
-CMD ["python", "backend/main.py"]
-```
+使用官方 Docker 镜像，无需自己构建：
 
 ```bash
-docker build -t nicept-helper .
-docker run -d -p 8000:8000 -v ./data:/app/backend/nicept.db --env-file backend/.env nicept-helper
+# 拉取镜像
+docker pull spellyaohui/nicept-helper:latest
+
+# 运行容器
+docker run -d \
+  --name nicept-helper \
+  -p 8000:8000 \
+  -e SECRET_KEY=your-random-secret-key \
+  -v nicept-data:/app/backend \
+  spellyaohui/nicept-helper:latest
 ```
+
+**详细配置和最佳实践** → [DOCKER.md](./DOCKER.md)
 
 ### 方案三：systemd 服务
 
