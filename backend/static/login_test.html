@@ -1,0 +1,211 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NicePT Helper - 站点登录测试</title>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #1a1a2e; color: #eee; min-height: 100vh; display: flex; justify-content: center; align-items: center; }
+        .container { background: #16213e; border-radius: 12px; padding: 32px; width: 420px; box-shadow: 0 8px 32px rgba(0,0,0,0.3); }
+        h2 { text-align: center; margin-bottom: 24px; color: #e94560; }
+        .field { margin-bottom: 16px; }
+        label { display: block; margin-bottom: 6px; font-size: 14px; color: #aaa; }
+        input[type="text"], input[type="password"] { width: 100%; padding: 10px 12px; border: 1px solid #333; border-radius: 6px; background: #0f3460; color: #eee; font-size: 14px; }
+        input:focus { outline: none; border-color: #e94560; }
+        .captcha-row { display: flex; gap: 12px; align-items: center; }
+        .captcha-row input { flex: 1; }
+        .captcha-row img { height: 40px; border-radius: 4px; cursor: pointer; }
+        button { width: 100%; padding: 12px; border: none; border-radius: 6px; font-size: 16px; cursor: pointer; margin-top: 8px; }
+        .btn-primary { background: #e94560; color: #fff; }
+        .btn-primary:hover { background: #c73e54; }
+        .btn-primary:disabled { background: #666; cursor: not-allowed; }
+        .btn-secondary { background: #0f3460; color: #aaa; border: 1px solid #333; margin-top: 8px; }
+        .status { margin-top: 16px; padding: 12px; border-radius: 6px; font-size: 13px; display: none; }
+        .status.success { display: block; background: #1b4332; color: #95d5b2; }
+        .status.error { display: block; background: #3d0000; color: #ff6b6b; }
+        .status.info { display: block; background: #1a1a4e; color: #a0a0ff; }
+        .result-box { margin-top: 12px; padding: 10px; background: #0a0a1a; border-radius: 6px; font-size: 12px; word-break: break-all; max-height: 120px; overflow-y: auto; }
+        .step-indicator { text-align: center; margin-bottom: 16px; color: #666; font-size: 13px; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h2>NicePT 站点登录</h2>
+
+        <!-- 第一步：系统登录 -->
+        <div id="step-auth">
+            <div class="step-indicator">第 0 步：系统认证</div>
+            <div class="field">
+                <label>管理员用户名</label>
+                <input type="text" id="admin-user" value="admin">
+            </div>
+            <div class="field">
+                <label>管理员密码</label>
+                <input type="password" id="admin-pass" value="admin123">
+            </div>
+            <button class="btn-primary" onclick="systemLogin()">系统登录</button>
+        </div>
+
+        <!-- 第二步：获取验证码 -->
+        <div id="step-captcha" style="display:none">
+            <div class="step-indicator">第 1 步：获取验证码</div>
+            <div class="field">
+                <label>站点地址</label>
+                <input type="text" id="site-url" value="https://www.nicept.net">
+            </div>
+            <button class="btn-primary" onclick="getCaptcha()">获取验证码</button>
+        </div>
+
+        <!-- 第三步：填写登录信息 -->
+        <div id="step-login" style="display:none">
+            <div class="step-indicator">第 2 步：填写登录信息</div>
+            <div class="field">
+                <label>PT 站用户名</label>
+                <input type="text" id="pt-username">
+            </div>
+            <div class="field">
+                <label>PT 站密码</label>
+                <input type="password" id="pt-password">
+            </div>
+            <div class="field">
+                <label>验证码（点击图片刷新）</label>
+                <div class="captcha-row">
+                    <input type="text" id="captcha-input" placeholder="输入验证码">
+                    <img id="captcha-img" onclick="getCaptcha()" title="点击刷新验证码">
+                </div>
+            </div>
+            <div class="field">
+                <label>两步验证码（如未设置可留空）</label>
+                <input type="text" id="two-step" placeholder="可选">
+            </div>
+            <button class="btn-primary" id="login-btn" onclick="submitLogin()">登录 NicePT</button>
+            <button class="btn-secondary" onclick="getCaptcha()">刷新验证码</button>
+        </div>
+
+        <div id="status" class="status"></div>
+        <div id="result" class="result-box" style="display:none"></div>
+    </div>
+
+    <script>
+        let TOKEN = '';
+        let SESSION_ID = '';
+
+        function showStatus(msg, type) {
+            const el = document.getElementById('status');
+            el.className = 'status ' + type;
+            el.textContent = msg;
+        }
+
+        function showResult(data) {
+            const el = document.getElementById('result');
+            el.style.display = 'block';
+            el.textContent = JSON.stringify(data, null, 2);
+        }
+
+        async function systemLogin() {
+            const user = document.getElementById('admin-user').value;
+            const pass = document.getElementById('admin-pass').value;
+            showStatus('正在登录系统...', 'info');
+
+            try {
+                const r = await fetch('/api/auth/login', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({username: user, password: pass})
+                });
+                const data = await r.json();
+                if (data.access_token) {
+                    TOKEN = data.access_token;
+                    showStatus('系统登录成功', 'success');
+                    document.getElementById('step-auth').style.display = 'none';
+                    document.getElementById('step-captcha').style.display = 'block';
+                } else {
+                    showStatus('系统登录失败: ' + (data.detail || '未知错误'), 'error');
+                }
+            } catch(e) {
+                showStatus('请求失败: ' + e.message, 'error');
+            }
+        }
+
+        async function getCaptcha() {
+            const siteUrl = document.getElementById('site-url').value;
+            showStatus('正在获取验证码...', 'info');
+
+            try {
+                const r = await fetch('/api/site-login/init', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': 'Bearer ' + TOKEN
+                    },
+                    body: JSON.stringify({site_url: siteUrl})
+                });
+                const data = await r.json();
+
+                if (data.session_id) {
+                    SESSION_ID = data.session_id;
+                    if (data.captcha_image) {
+                        document.getElementById('captcha-img').src = data.captcha_image;
+                        showStatus('验证码获取成功，请填写登录信息', 'success');
+                    } else {
+                        showStatus('未检测到验证码，可直接登录', 'info');
+                    }
+                    document.getElementById('step-captcha').style.display = 'none';
+                    document.getElementById('step-login').style.display = 'block';
+                } else {
+                    showStatus('获取验证码失败: ' + (data.detail || '未知错误'), 'error');
+                }
+            } catch(e) {
+                showStatus('请求失败: ' + e.message, 'error');
+            }
+        }
+
+        async function submitLogin() {
+            const btn = document.getElementById('login-btn');
+            btn.disabled = true;
+            btn.textContent = '登录中...';
+            showStatus('正在登录 NicePT...', 'info');
+
+            const siteUrl = document.getElementById('site-url').value;
+            const username = document.getElementById('pt-username').value;
+            const password = document.getElementById('pt-password').value;
+            const captcha = document.getElementById('captcha-input').value;
+            const twoStep = document.getElementById('two-step').value;
+
+            try {
+                const r = await fetch('/api/site-login/submit', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': 'Bearer ' + TOKEN
+                    },
+                    body: JSON.stringify({
+                        session_id: SESSION_ID,
+                        site_url: siteUrl,
+                        username: username,
+                        password: password,
+                        captcha: captcha,
+                        two_step_code: twoStep,
+                        auto_save: true
+                    })
+                });
+                const data = await r.json();
+
+                if (data.success) {
+                    showStatus('登录成功! UID: ' + data.uid + ', 账号已保存 (ID: ' + data.account_id + ')', 'success');
+                    showResult({cookie: data.cookie, uid: data.uid, account_id: data.account_id});
+                } else {
+                    showStatus('登录失败: ' + data.message, 'error');
+                    showResult(data);
+                }
+            } catch(e) {
+                showStatus('请求失败: ' + e.message, 'error');
+            } finally {
+                btn.disabled = false;
+                btn.textContent = '登录 NicePT';
+            }
+        }
+    </script>
+</body>
+</html>
